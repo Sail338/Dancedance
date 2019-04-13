@@ -16,7 +16,7 @@ import estimateBoundingBox as ebb
 dance_moves = ['dab', 'nae nae', 'whip', 'shuffling', 'moonwalk','moonwalk', 'sprinkler','macarena','twerking','flossing','gangnam style']
 dance_moves_to_labels = {j: i for i, j in enumerate(dance_moves)}
 
-BATCH_SIZE=34
+BATCH_SIZE=36 * 10
 
 model = tf.keras.Sequential([
 # Adds a densely-connected layer with 64 units to the model:
@@ -43,7 +43,7 @@ def feed_model(data, labels=None, epochs=None):
     else:
         lbls = [zero_except(dance_moves_to_labels[i]) for i in labels]
         if epochs is None: epochs = 1
-        return model.fit(data, lbls, epochs=num_frames)
+        return model.fit(data, lbls, epochs=epochs)
 
 class Person:
     CONFIDENCE_THRES = 0.3
@@ -171,5 +171,5 @@ if __name__ == "__main__":
             if isfile(join(move, vid)):
                 all_the_data = read_video(join(move, vid), 'cmu', (720, 480))
                 for datum, epochs in all_the_data:
-                    feed_model(datum, move, epochs)
+                    feed_model(datum, [move for i in range(epochs)], epochs)
     save_model("moderu/ore")

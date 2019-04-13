@@ -87,6 +87,7 @@ class Person:
         return self.dist(other) == 0
 
 def inference(order,image,model,target_size):
+    global TICKET
     est = TfPoseEstimator(get_graph_path(model), target_size=target_size)
     humans = est.inference(image,resize_to_default=True, upsample_size=4.0)
     while order != TICKET:
@@ -117,7 +118,10 @@ def read_video(video_file, model, target_size):
         threads.append(thread)
         #humans = e.inference(image,resize_to_default=True, upsample_size=4.0)
         thread.start()
-        print("Inference Finished...")
+        if len(threads) % 500 == 0:
+            for thread in threads:
+                thread.join()
+            threads = []
     for thread in threads:
         thread.join()
     for humans in inference:

@@ -45,7 +45,7 @@ def getUserBoundingBox(human):
     right_span = 0
     right_span += distanceFormula(r_wrist.x,r_wrist.y,r_elbow.x,r_elbow.y)
     right_span += distanceFormula(r_elbow.x,r_elbow.y,r_shoulder.x,r_shoulder.y)
-    r_x = r_shoulder.x - right_span 
+    r_x = r_shoulder.x + right_span 
     curr_distance+=right_span
 
     low_y = ankle.y
@@ -64,12 +64,14 @@ def getUserBoundingBox(human):
 def distanceFormula(x1,y1,x2,y2):
     return math.sqrt((x2-x1)**2 + (y2-y1)**2)
 
-def scaled_bounding_box(human, width, height):
+def scaled_bounding_box(human, height, width):
+    print(width)
+    print(height)
     b = getUserBoundingBox(human)
     if b is None:
         rv = {'w': 0,'x': 0,'y': 0,'h': 0}
     else:
-        rv = {'w': b['w'] * 1000,'x': b['x'] * 1000,'y': b['y'] * 720,'h': b['h'] * 720}
+        rv = {'w': b['w'] * width,'x': b['x'] * width,'y': b['y'] * height,'h': b['h'] * height}
     print(rv)
     return rv
 

@@ -68,8 +68,13 @@ class Person:
         self.epochs += 1
         new_frames = [([p.x, p.y] if p.score > Person.CONFIDENCE_THRES else [-1, -1]) for p in human.pairs]
         for p in new_frames:
-            self.frames.append((p[0] - self.bb['x'])/self.bb['w'])
-            self.frames.append((p[1] - self.bb['y'])/self.bb['h'])
+            if p[0] >= 0:
+                self.frames.append((p[0] - self.bb['x'])/self.bb['w'])
+                self.frames.append((p[1] - self.bb['y'])/self.bb['h'])
+            else:
+                self.frames.append(-1)
+                self.frames.append(-1)
+
     def dist(self, person):
         return ebb.distanceFormula(self.neck.x, self.neck.y, person.neck.x, person.neck.y)
     def __eq__(self, other):
@@ -119,6 +124,14 @@ def save_model(file="./moderu"):
 
 def restore_model(file="./moderu"):
     model.load_weights(file)
+
+def webcam():
+    cam = cv2.VideoCapture(0)
+    while True:
+        ret_val, image = cam.read()
+        humans = e.inference(image, resize_to_default=True, upsample_size=4.0)
+        for human in humans:
+            #choose the center-most human
 
 if __name__ == "__main__":
     from search_downloader import search_n_dl

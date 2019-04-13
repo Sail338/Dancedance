@@ -1,6 +1,7 @@
 import cv2
 
 import sys
+import threading
 from os import getcwd
 sys.path.append(getcwd() + "/tf-pose-estimation")
 
@@ -18,6 +19,9 @@ dance_moves = ["nae nae",'macarena']
 dance_moves_to_labels = {j: i for i, j in enumerate(dance_moves)}
 
 BATCH_SIZE=36 * 30
+
+TICKET = 1
+inference_res = []
 
 model = tf.keras.Sequential([
 # Adds a densely-connected layer with 64 units to the model:
@@ -82,22 +86,41 @@ class Person:
     def __eq__(self, other):
         return self.dist(other) == 0
 
+def inference(order,image,model,target_size):
+    est = TfPoseEstimator(get_graph_path(model), target_size=target_size)
+    humans = est.inference(image,resize_to_default=True, upsample_size=4.0)
+    while order != TICKET:
+        continue
+    TICKET+=1
+    print("Frame "+str(order)+" finished...")
+    inference_res.append(humans)
+    return
+
 def read_video(video_file, model, target_size):
     HEART_DIST_TOL = 5
     CONFIDENCE = 0.3 #IDK, they use this somewhere
     cap = cv2.VideoCapture(video_file)
 
     if cap.isOpened() is False:
-        print("Error opening video stream or file")
+        print("Error opening video streasm or file")
 
     num_frames = 0
     persons = []
+    frame_num = 0
+    threads = []
     while cap.isOpened():
         new_peeps = []
         ret_val, image = cap.read()
-        e = TfPoseEstimator(get_graph_path(model), target_size=target_size)
-
-        humans = e.inference(image,resize_to_default=True, upsample_size=4.0)
+        frame_num+=1
+        print("Frame "+str(frame_num))
+        thread = threading.Thread(target=inference, args=(frame_num,image,model,target_size))
+        threads.append(thread)
+        #humans = e.inference(image,resize_to_default=True, upsample_size=4.0)
+        thread.start()
+        print("Inference Finished...")
+    for thread in threads:
+        thread.join()
+    for humans in inference:
         for human in humans:
             curr_person = Person(human)
             if not curr_person.ok:
@@ -119,7 +142,7 @@ def read_video(video_file, model, target_size):
             for peep in persons:
                 if peep not in new_peeps:
                     yield peep.frames, peep.epochs
-
+        print("Humans identified...");
         for peep in persons:
             yield peep.frames, peep.epochs
 

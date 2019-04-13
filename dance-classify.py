@@ -68,10 +68,10 @@ def read_video(video_file, model, target_size):
             num_frames += 1
             frames += temp_frames
 
-def save_model(file="moderu"):
+def save_model(file="./moderu"):
     model.save_weights(file)
 
-def restore_model(file="moderu"):
+def restore_model(file="./moderu"):
     model.load_weights(file)
 
 if __name__ == "__main__":
@@ -80,15 +80,18 @@ if __name__ == "__main__":
     from os.path import isfile, join, exists
 
     if exists("moderu"):
-        restore_model()
+        restore_model("moderu/ore")
+    else:
+        mkdir("moderu")
+        save_model("moderu/ore")
+
     move = "nae-nae"
     if not exists(move):
         mkdir(move)
-        size = (480, 480)#ANDREA PLZ
-        search_n_dl(move, 10, move)
+        search_n_dl(move, 1, move)
 
     for vid in listdir(move):
         if isfile(join(move, vid)):
-            data, num = read_video(join(move, vid), 'cmu', size)
+            data, num = read_video(join(move, vid), 'cmu', (720, 480))
             feed_model(data, move, num)
-    save_model()
+    save_model("moderu/ore")

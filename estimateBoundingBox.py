@@ -19,7 +19,10 @@ def getUserBoundingBox(human):
     ankle = None
     print(wingSpanParts.keys())
     if("CocoPart.LAnkle" in wingSpanParts):
-        ankle = wingSpanParts["CocoPart.LAnkle"]
+        if("CocoPart.RAnkle" in wingSpanParts):
+            ankle = wingSpanParts["CocoPart.LAnke"] if wingSpanParts["CocoPart.LAnkle"].y > wingSpanParts["CocoPart.RAnkle"].y else wingSpanParts["CocoPart.RAnkle"]
+        else:
+            ankle = wingSpanParts["CocoPart.LAnkle"]
     else:
         ankle = wingSpanParts["CocoPart.RAnkle"]
 
@@ -31,10 +34,9 @@ def getUserBoundingBox(human):
     curr_distance += distanceFormula(l_elbow.x,l_elbow.y,l_shoulder.x,l_shoulder.y)
     #This could be flipped
     l_x  = l_shoulder.x - curr_distance
-    print(l_shoulder.x)
-    high_y = l_shoulder.y + curr_distance
+    high_y = l_shoulder.y - curr_distance
     height += curr_distance
-    
+
     #distance b/w l shoulder and right shoulder
     r_shoulder = wingSpanParts['CocoPart.RShoulder']
     curr_distance += distanceFormula(l_shoulder.x,l_shoulder.y,r_shoulder.x,r_shoulder.y)
@@ -45,15 +47,15 @@ def getUserBoundingBox(human):
     right_span = 0
     right_span += distanceFormula(r_wrist.x,r_wrist.y,r_elbow.x,r_elbow.y)
     right_span += distanceFormula(r_elbow.x,r_elbow.y,r_shoulder.x,r_shoulder.y)
-    r_x = r_shoulder.x + right_span 
+    r_x = r_shoulder.x + right_span
     curr_distance+=right_span
 
     low_y = ankle.y
 
     mid_x = (l_x + r_x)/2
-  
+
     mid_y = (low_y + high_y)/2
-    
+
     return {
         "w":curr_distance,
         "h":height,
@@ -87,7 +89,7 @@ if __name__ == "__main__":
     import cv2
     import numpy as np
 
-    image = common.read_imgfile("tf-pose-estimation/images/aaa.jpg", None, None)
+    image = common.read_imgfile("tf-pose-estimation/images/p1.jpg", None, None)
     if image is None:
         logger.error('Image can not be read, path=%s' % args.image)
         sys.exit(-1)

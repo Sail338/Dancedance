@@ -68,11 +68,19 @@ def read_video(video_file, model, target_size):
             num_frames += 1
             frames += temp_frames
 
+def save_model(file="moderu"):
+    model.save_weights(file)
+
+def restore_model(file="moderu"):
+    model.load_weights(file)
+
 if __name__ == "__main__":
     from search_downloader import search_n_dl
     from os import listdir, mkdir
     from os.path import isfile, join, exists
 
+    if exists("moderu"):
+        restore_model()
     move = "nae-nae"
     if not exists(move):
         mkdir(move)
@@ -83,3 +91,4 @@ if __name__ == "__main__":
         if isfile(join(move, vid)):
             data, num = read_video(join(move, vid), 'cmu', size)
             feed_model(data, move, num)
+    save_model()

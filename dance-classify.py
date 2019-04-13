@@ -13,7 +13,8 @@ from tensorflow.keras import layers
 
 import estimateBoundingBox as ebb
 
-dance_moves = ['dab', 'nae nae', 'whip', 'shuffling', 'moonwalk', 'what the good fuck']
+dance_moves = ['dab', 'nae nae', 'whip', 'shuffling', 'moonwalk','moonwalk',
+'superman', 'sprinkler','macarena','twerking','flossing','gangnam style']
 dance_moves_to_labels = {j: i for i, j in enumerate(dance_moves)}
 
 BATCH_SIZE=34
@@ -90,14 +91,14 @@ def read_video(video_file, model, target_size):
         ret_val, image = cap.read()
         e = TfPoseEstimator(get_graph_path(model), target_size=target_size)
 
-        humans = e.inference(image,resize_to_default=True, upsample_size=4.0) 
+        humans = e.inference(image,resize_to_default=True, upsample_size=4.0)
         print(humans)
         for human in humans:
             curr_person = Person(human)
             if not curr_person.ok:
                 continue
 
-            guess_person = min(range(len(persons)), key=lambda i: person[i].dist(curr_person)
+            guess_person = min(range(len(persons)), key=lambda i: person[i].dist(curr_person))
             if persons[guess_person].dist(curr_person) > HEART_DIST_TOL:
                 #new person
                 new_bb = ebb.estimateBoundingBox(human)
@@ -131,14 +132,15 @@ if __name__ == "__main__":
         mkdir("moderu")
         save_model("moderu/ore")
 
-    move = "nae nae"
-    if not exists(move):
-        mkdir(move)
-        search_n_dl(move + " tutorial", 1, move)
-
-    for vid in listdir(move):
-        if isfile(join(move, vid)):
-            all_the_data = read_video(join(move, vid), 'cmu', (720, 480))
-            for datum, epochs in all_the_data:
-                feed_model(datum, move, epochs)
+    for move in dance_moves:
+        try:
+            mkdir(move)
+        except FileExistsError:
+            print("Directory Already Exists")
+        search_n_dl(move + " compilation", 20, move)
+        for vid in listdir(move):
+            if isfile(join(move, vid)):
+                all_the_data = read_video(join(move, vid), 'cmu', (720, 480))
+                for datum, epochs in all_the_data:
+                    feed_model(datum, move, epochs)
     save_model("moderu/ore")

@@ -137,6 +137,7 @@ if __name__ == "__main__":
 
     for vid in listdir(move):
         if isfile(join(move, vid)):
-            data, num = read_video(join(move, vid), 'cmu', (720, 480))
-            feed_model(data, move, num)
+            all_the_data = read_video(join(move, vid), 'cmu', (720, 480))
+            for datum, epochs in all_the_data:
+                feed_model(datum, move, epochs)
     save_model("moderu/ore")

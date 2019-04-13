@@ -46,6 +46,7 @@ def download_videos(videos, path_prefix=''):
 
 def search_n_dl(query, maxResults, path_prefix=''):
     videos = youtube_search(query, maxResults)
+    download_videos(videos, path_prefix)
 
 if __name__ == "__main__":
     videos = youtube_search("hello", 3)

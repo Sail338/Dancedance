@@ -1,14 +1,17 @@
+import cv2
+#TODO: fix import?
+from tf_pose.networks import get_graph_path, model_wh
+
 import tensorflow as tf
 from tensorflow.keras import layers
 
 dance_moves = ['dab', 'nay-nay', 'whip', 'shuffling', 'moonwalk']
 dance_moves_to_labels = {j: i for i, j in enumerate(dance_moves)}
 
-BATCH_SIZE=32
+BATCH_SIZE=34
 
 model = tf.keras.Sequential([
 # Adds a densely-connected layer with 64 units to the model:
-#TODO: what is input shape? What are reasonable numbers?
 layers.Dense(64, activation='relu', input_shape=(BATCH_SIZE,)),
 # Add another:
 layers.Dense(64, activation='relu'),
@@ -26,5 +29,30 @@ def feed_model(data, labels=None, epochs=None):
         return dance_moves[max(range(len(dance_moves)), key=lambda x: result[x])]
     else:
         lbls = [dance_moves_to_labels[i] for i in labels]
-        if epochs is None: epochs = 1
-        return model.fit(data, lbls, epochs=epochs)
+        if num_frames is None: num_frames = 1
+        return model.fit(data, lbls, epochs=num_frames)
+
+def read_video(video_file, model, target_size):
+    CONFIDENCE = 0.4
+    cap = cv2.VideoCapture(video_file)
+
+    if cap.isOpened() is False:
+        print("Error opening video stream or file")
+    frames = []
+    while cap.isOpened():
+        ret_val, image = cap.read()
+        e = TfPoseEstimator(get_graph_path(model), target_size=target_size)
+
+        humans = e.inference(image)
+        if not args.showBG:
+            image = np.zeros(image.shape)
+        temp_frames = []
+        frame_is_trash = True
+        for part in humans:
+            if part.score > CONFIDENCE:
+                frame_is_trash = False
+                temp_frames += [part.x, part.y]
+            else:
+                temp_frames += [-1, -1]
+        if not frame_is_trash:
+            frames += temp_frames

@@ -13,8 +13,7 @@ from tensorflow.keras import layers
 
 import estimateBoundingBox as ebb
 
-dance_moves = ['dab', 'nae nae', 'whip', 'shuffling', 'moonwalk','moonwalk',
-'superman', 'sprinkler','macarena','twerking','flossing','gangnam style']
+dance_moves = ['dab', 'nae nae', 'whip', 'shuffling', 'moonwalk','moonwalk', 'sprinkler','macarena','twerking','flossing','gangnam style']
 dance_moves_to_labels = {j: i for i, j in enumerate(dance_moves)}
 
 BATCH_SIZE=34
@@ -134,10 +133,11 @@ if __name__ == "__main__":
 
     for move in dance_moves:
         try:
-            mkdir(move)
-            search_n_dl(move + " compilation", 20, move)
+            mkdir("moves/"+move)
+            search_n_dl(move + " compilation", 20, "moves/"+move)
         except FileExistsError:
             print("Directory Already Exists")
+        continue
         for vid in listdir(move):
             if isfile(join(move, vid)):
                 all_the_data = read_video(join(move, vid), 'cmu', (720, 480))

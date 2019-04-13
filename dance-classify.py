@@ -1,5 +1,4 @@
 import cv2
-#TODO: fix import?
 
 import sys
 from os import getcwd
@@ -7,11 +6,14 @@ sys.path.append(getcwd() + "/tf-pose-estimation")
 
 from tf_pose.networks import get_graph_path, model_wh
 from tf_pose.estimator import TfPoseEstimator
+from tf_pose.common import CocoPart
 
 import tensorflow as tf
 from tensorflow.keras import layers
 
-dance_moves = ['dab', 'nay-nay', 'whip', 'shuffling', 'moonwalk', 'what the good fuck']
+import estimateBoundingBox as ebb
+
+dance_moves = ['dab', 'nae nae', 'whip', 'shuffling', 'moonwalk', 'what the good fuck']
 dance_moves_to_labels = {j: i for i, j in enumerate(dance_moves)}
 
 BATCH_SIZE=34
@@ -43,30 +45,73 @@ def feed_model(data, labels=None, epochs=None):
         if num_frames is None: num_frames = 1
         return model.fit(data, lbls, epochs=num_frames)
 
+class Person:
+    CONFIDENCE_THRES = 0.3
+    def __init__(self, human):
+        if CocoPart.Neck not in human.body_parts or human.body_parts[CocoPart.Neck].score < Person.CONFIDENCE_THRES:
+            self.ok = False #no neck, no life
+            return
+        self.ok = True
+        self.neck = human.body_parts[CocoPart.Neck]
+        self.bb = None
+        self.frame = []
+        self.epochs = 0
+    def set_bb_from(self, person):
+        if person.bb is None:
+            return
+        delta_x = self.neck.x - person.neck.x
+        delta_y = self.neck.y - person.neck.y
+        self.bb = person.bb.copy()
+        self.bb['x'] += delta_x
+        self.bb['y'] += delta_y
+    def add_frame(self, human):
+        self.epochs += 1
+        new_frames = [([p.x, p.y] if p.score > Person.CONFIDENCE_THRES else [-1, -1]) for p in human.pairs]
+        for p in new_frames:
+            self.frames.append(p[0])
+            self.frames.append(p[1])
+    def dist(self, person):
+        return ebb.distanceFormula(self.neck.x, self.neck.y, person.neck.x, person.neck.y)
+    def __eq__(self, other):
+        return self.dist(other) == 0
+
 def read_video(video_file, model, target_size):
-    CONFIDENCE = 0.4
+    HEART_DIST_TOL = 5
+    CONFIDENCE = 0.3 #IDK, they use this somewhere
     cap = cv2.VideoCapture(video_file)
 
     if cap.isOpened() is False:
         print("Error opening video stream or file")
-    frames = []
+
     num_frames = 0
+    persons = []
     while cap.isOpened():
+        new_peeps = []
         ret_val, image = cap.read()
         e = TfPoseEstimator(get_graph_path(model), target_size=target_size)
 
         humans = e.inference(image)
-        temp_frames = []
-        frame_is_trash = True
-        for part in humans:
-            if part.score > CONFIDENCE:
-                frame_is_trash = False
-                temp_frames += [part.x, part.y]
+        for human in humans:
+            curr_person = Person(human)
+            if not curr_person.ok:
+                continue
+
+            guess_person = min(range(len(persons)), key=lambda i: person[i].dist(curr_person)
+            if persons[guess_person].dist(curr_person) > HEART_DIST_TOL:
+                #new person
+                new_bb = ebb.estimateBoundingBox(human)
+                if new_bb is None:
+                    continue
+                else:
+                    curr_person.bb = new_bb
             else:
-                temp_frames += [-1, -1]
-        if not frame_is_trash:
-            num_frames += 1
-            frames += temp_frames
+                curr_person.set_bb_from(persons[guess_person])
+            new_peeps.append(curr_person)
+            curr_person.add_frame(human)
+
+            for peep in persons:
+                if peep not in new_peeps:
+                    yield peep.frames, peep.epochs
 
 def save_model(file="./moderu"):
     model.save_weights(file)
@@ -85,10 +130,10 @@ if __name__ == "__main__":
         mkdir("moderu")
         save_model("moderu/ore")
 
-    move = "nae-nae"
+    move = "nae nae"
     if not exists(move):
         mkdir(move)
-        search_n_dl(move, 1, move)
+        search_n_dl(move + " tutorial", 1, move)
 
     for vid in listdir(move):
         if isfile(join(move, vid)):

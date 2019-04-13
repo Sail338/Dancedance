@@ -388,7 +388,7 @@ class TfPoseEstimator:
         return npimg_q
 
     @staticmethod
-    def draw_humans(npimg, humans, imgcopy=False):
+    def draw_humans(npimg, humans, imgcopy=False, bounding_box_fn=lambda human, img_x, img_y: Human.get_upper_body_box(human, img_x, img_y)):
         if imgcopy:
             npimg = np.copy(npimg)
         image_h, image_w = npimg.shape[:2]
@@ -413,7 +413,8 @@ class TfPoseEstimator:
                 cv2.line(npimg, centers[pair[0]], centers[pair[1]], common.CocoColors[pair_order], 3)
 
             #bounding box (HEMAN)
-            box = human.get_upper_body_box(image_h, image_w)
+            box = bounding_box_fn(human, image_h, image_w)
+            print(box)
             b_left = (int(box['x'] - box['w']/2), int(box['y'] - box['h']/2))
             t_left = (int(box['x'] - box['w']/2), int(box['y'] + box['h']/2))
             t_right = (int(box['x'] + box['w']/2), int(box['y'] + box['h']/2))

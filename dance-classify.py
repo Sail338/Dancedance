@@ -5,7 +5,7 @@ from os import getcwd
 sys.path.append(getcwd() + "/tf-pose-estimation")
 
 from tf_pose.networks import get_graph_path, model_wh
-from tf_pose.estimator import TfPoseEstimator
+from tf_pose.estimator import TfPoseEstimator, BodyPart
 from tf_pose.common import CocoPart
 
 import tensorflow as tf
@@ -42,7 +42,7 @@ def feed_model(data, labels=None, epochs=None):
         return dance_moves[max(range(len(dance_moves)), key=lambda x: result[x])]
     else:
         lbls = [zero_except(dance_moves_to_labels[i]) for i in labels]
-        if num_frames is None: num_frames = 1
+        if epochs is None: epochs = 1
         return model.fit(data, lbls, epochs=num_frames)
 
 class Person:
@@ -50,9 +50,10 @@ class Person:
     def __init__(self, human):
         if CocoPart.Neck not in human.body_parts or human.body_parts[CocoPart.Neck].score < Person.CONFIDENCE_THRES:
             self.ok = False #no neck, no life
-            return
-        self.ok = True
-        self.neck = human.body_parts[CocoPart.Neck]
+            self.neck = BodyPart(CocoPart.Neck, 0, 0, 1)
+        else:
+            self.ok = True
+            self.neck = human.body_parts[CocoPart.Neck]
         self.bb = None
         self.frame = []
         self.epochs = 0
@@ -130,10 +131,25 @@ def webcam():
     while True:
         ret_val, image = cam.read()
         humans = e.inference(image, resize_to_default=True, upsample_size=4.0)
-        for human in humans:
-            #choose the center-most human
+        with_bb = filter(lambda hb: hb[1] is not None,
+                (h, ebb.estimateBoundingBox(h)) for h in humans)
+        try:
+            middle_man, bb = min(with_bb, key=lambda wb: ebb.distanceFormula(wb[1].x, wb[1].y, 0.5, 0.5))
+        except ValueError:
+            yield "No people detected"
+        else:
+            pers = Person(middle_man)
+            pers.bb = bb
+            pers.add_frame(middle_man)
+            yield feed_model(pers.frames)
+
 
 if __name__ == "__main__":
+    if sys.argc == 1:
+        restore_model("moderu/ore")
+        for move in webcam():
+            print(move)
+
     from search_downloader import search_n_dl
     from os import listdir, mkdir
     from os.path import isfile, join, exists

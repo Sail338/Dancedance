@@ -135,10 +135,9 @@ if __name__ == "__main__":
     for move in dance_moves:
         try:
             mkdir(move)
+            search_n_dl(move + " compilation", 20, move)
         except FileExistsError:
             print("Directory Already Exists")
-        search_n_dl(move + " compilation", 20, move)
-        continue
         for vid in listdir(move):
             if isfile(join(move, vid)):
                 all_the_data = read_video(join(move, vid), 'cmu', (720, 480))

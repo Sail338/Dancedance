@@ -90,7 +90,8 @@ def read_video(video_file, model, target_size):
         ret_val, image = cap.read()
         e = TfPoseEstimator(get_graph_path(model), target_size=target_size)
 
-        humans = e.inference(image)
+        humans = e.inference(image,resize_to_default=True, upsample_size=4.0) 
+        print(humans)
         for human in humans:
             curr_person = Person(human)
             if not curr_person.ok:

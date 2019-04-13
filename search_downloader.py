@@ -15,7 +15,7 @@ def youtube_search(query, maxResults):
     ).execute()
 
     videos = []
-    
+
     for search_result in search_response.get('items', []):
         if search_result['id']['kind'] == 'youtube#video':
             print("ayy a video")
@@ -23,8 +23,7 @@ def youtube_search(query, maxResults):
     print(videos)
     return videos
 
-
-def download_videos(videos):
+def download_videos(videos, path_prefix=''):
     for vid in videos:
         vid_name = "http://youtube.com/watch?v=" + vid
         yt = YouTube(vid_name)
@@ -34,14 +33,20 @@ def download_videos(videos):
         #this is bad but the order_by in't work
         for stream in streams:
             if stream.resolution == '480p':
-                stream.download()
+                stream.download(path_prefix)
+                return
 
         for stream in streams:
-            if stream.res == '720p':
-                stream.download()
+            if stream.resolution == '720p':
+                stream.download(path_prefix)
+                return
+
+        print("no acceptible resolution for video found")
 
 
+def search_n_dl(query, maxResults, path_prefix=''):
+    videos = youtube_search(query, maxResults)
 
 if __name__ == "__main__":
     videos = youtube_search("hello", 3)
-    download_videos(videos)
+    download_videos(videos, 'test')

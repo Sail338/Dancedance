@@ -1,6 +1,12 @@
 import cv2
 #TODO: fix import?
+
+import sys
+from os import getcwd
+sys.path.append(getcwd() + "/tf-pose-estimation")
+
 from tf_pose.networks import get_graph_path, model_wh
+from tf_pose.estimator import TfPoseEstimator
 
 import tensorflow as tf
 from tensorflow.keras import layers
@@ -50,8 +56,6 @@ def read_video(video_file, model, target_size):
         e = TfPoseEstimator(get_graph_path(model), target_size=target_size)
 
         humans = e.inference(image)
-        if not args.showBG:
-            image = np.zeros(image.shape)
         temp_frames = []
         frame_is_trash = True
         for part in humans:
@@ -66,12 +70,15 @@ def read_video(video_file, model, target_size):
 
 if __name__ == "__main__":
     from search_downloader import search_n_dl
-    from os import listdir
-    from os.path import isfile, join
+    from os import listdir, mkdir
+    from os.path import isfile, join, exists
 
     move = "nae-nae"
-    size = #ANDREA PLZ
-    search_n_dl(move, 10, move)
+    if not exists(move):
+        mkdir(move)
+        size = (480, 480)#ANDREA PLZ
+        search_n_dl(move, 10, move)
+
     for vid in listdir(move):
         if isfile(join(move, vid)):
             data, num = read_video(join(move, vid), 'cmu', size)

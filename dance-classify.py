@@ -69,8 +69,8 @@ class Person:
         self.epochs += 1
         new_frames = [([p.x, p.y] if p.score > Person.CONFIDENCE_THRES else [-1, -1]) for p in human.pairs]
         for p in new_frames:
-            self.frames.append(p[0])
-            self.frames.append(p[1])
+            self.frames.append((p[0] - self.bb['x'])/self.bb['w'])
+            self.frames.append((p[1] - self.bb['y'])/self.bb['h'])
     def dist(self, person):
         return ebb.distanceFormula(self.neck.x, self.neck.y, person.neck.x, person.neck.y)
     def __eq__(self, other):
@@ -138,6 +138,7 @@ if __name__ == "__main__":
             search_n_dl(move + " compilation", 20, move)
         except FileExistsError:
             print("Directory Already Exists")
+        continue
         for vid in listdir(move):
             if isfile(join(move, vid)):
                 all_the_data = read_video(join(move, vid), 'cmu', (720, 480))

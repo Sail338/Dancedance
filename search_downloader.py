@@ -15,7 +15,7 @@ def youtube_search(query, maxResults):
     ).execute()
 
     videos = []
-    
+
     for search_result in search_response.get('items', []):
         if search_result['id']['kind'] == 'youtube#video':
             print("ayy a video")
@@ -23,14 +23,17 @@ def youtube_search(query, maxResults):
     print(videos)
     return videos
 
-
-def download_videos(videos):
+def download_videos(videos, path_prefix=''):
     for vid in videos:
         vid_name = "http://youtube.com/watch?v=" + vid
         yt = YouTube(vid_name)
         print(yt.title)
-        yt.streams.first().download()
+        yt.streams.first().download(path_prefix)
+
+def search_n_dl(query, maxResults, path_prefix=''):
+    videos = youtube_search(query, maxResults)
+    download_videos(videos, path_prefix)
 
 if __name__ == "__main__":
     videos = youtube_search("hello", 3)
-    download_videos(videos)
+    download_videos(videos, 'test')

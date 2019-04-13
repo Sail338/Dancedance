@@ -414,10 +414,14 @@ class TfPoseEstimator:
 
             #bounding box (HEMAN)
             box = human.get_upper_body_box(image_h, image_w)
-            cv2.line(npimg, box['x'], box['y'], [0, 0, 255])
-            cv2.line(npimg, box['x'] + box['w'], box['y'], [0, 0, 255])
-            cv2.line(npimg, box['x'] + box['w'], box['y'] + box['h'], [0, 0, 255])
-            cv2.line(npimg, box['x'], box['y'] + box['h'], [0, 0, 255])
+            b_left = (box['x'], box['y'])
+            t_left = (box['x'], box['y'] + box['h'])
+            t_right = (box['x'] + box['w'], box['y'] + box['h'])
+            b_right = (box['x'] + box['w'], box['y'])
+            cv2.line(npimg, b_left, t_left, [0, 0, 255])
+            cv2.line(npimg, t_left, t_right, [0, 0, 255])
+            cv2.line(npimg, t_right, b_right, [0, 0, 255])
+            cv2.line(npimg, b_right, b_left, [0, 0, 255])
 
         return npimg
 

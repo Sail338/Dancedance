@@ -34,12 +34,12 @@ def download_videos(videos, path_prefix=''):
         for stream in streams:
             if stream.resolution == '480p':
                 stream.download(path_prefix)
-                return
+                break
 
         for stream in streams:
             if stream.resolution == '720p':
                 stream.download(path_prefix)
-                return
+                break
 
         print("no acceptible resolution for video found")
 

@@ -29,7 +29,18 @@ def download_videos(videos):
         vid_name = "http://youtube.com/watch?v=" + vid
         yt = YouTube(vid_name)
         print(yt.title)
-        yt.streams.first().download()
+        streams = yt.streams.all()
+
+        #this is bad but the order_by in't work
+        for stream in streams:
+            if stream.resolution == '480p':
+                stream.download()
+
+        for stream in streams:
+            if stream.res == '720p':
+                stream.download()
+
+
 
 if __name__ == "__main__":
     videos = youtube_search("hello", 3)

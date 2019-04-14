@@ -55,7 +55,7 @@ def zero_except(idx):
     rv[idx] = 1
     return rv
 
-def feed_model(data, labels=None, epochs=None):
+def feed_model(data, labels=None, epochs=None, steps_per_epoch=None):
     data2 = np.array([data])
     if labels is None:
         #predict dance move
@@ -65,7 +65,7 @@ def feed_model(data, labels=None, epochs=None):
         lbls = np.array([zero_except(dance_moves_to_labels[i]) for i in labels])
         print(lbls, epochs, data2.shape)
         if epochs is None: epochs = 1
-        return model.fit(data2, lbls, epochs=epochs)
+        return model.fit(data2, lbls, epochs=epochs, steps_per_epoch=steps_per_epoch)
 
 class Person:
     CONFIDENCE_THRES = 0.0
@@ -251,7 +251,7 @@ if __name__ == "__main__":
                     all_the_data = read_video(join(move_path, vid), 'mobilenet_thin', (368, 368))
                     for datum, epochs in all_the_data:
                         if len(datum) >= BATCH_SIZE:
-                            feed_model(datum, labels=[move for i in range(epochs)], epochs=epochs)
+                            feed_model(datum, labels=[move for i in range(epochs)], steps_per_epoch=epochs)
                     save_model("moderu/ore")
                     print("FINISHED A VIDEO")
     except Exception as e:

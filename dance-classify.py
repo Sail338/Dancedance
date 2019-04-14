@@ -159,11 +159,15 @@ def restore_model(file="./moderu"):
 
 def webcam():
     cam = cv2.VideoCapture(0)
+    # model = "mobilenet_thin"
+    model = "cmu"
     while True:
         ret_val, image = cam.read()
+        e = TfPoseEstimator(get_graph_path(model), target_size=(720, 480))
         humans = e.inference(image, resize_to_default=True, upsample_size=4.0)
+        print(humans)
         with_bb = filter(lambda hb: hb[1] is not None,
-                ((h, ebb.estimateBoundingBox(h)) for h in humans))
+                ((h, ebb.getUserBoundingBox(h)) for h in humans))
         try:
             middle_man, bb = min(with_bb, key=lambda wb: ebb.distanceFormula(wb[1].x, wb[1].y, 0.5, 0.5))
         except ValueError:

@@ -111,7 +111,7 @@ def read_video(video_file, model, target_size):
     HEART_DIST_TOL = 5
     CONFIDENCE = 0.3 #IDK, they use this somewhere
     cap = cv2.VideoCapture(video_file)
-    cap.set(cv2.CV_CAP_PROP_POS_FRAMES, len(inference_res))
+    cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, len(inference_res))
 
     if cap.isOpened() is False:
         print("Error opening video streasm or file")
@@ -226,5 +226,5 @@ if __name__ == "__main__":
         print(str(e))
         print("SHIT HAPPENED")
         save_model("moderu/ore")
-        with open("inference_res.pkl", "w") as inf:
+        with open("inference_res.pkl", "wb") as inf:
             pickle.dump(inference_res, inf)

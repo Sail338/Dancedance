@@ -226,4 +226,5 @@ if __name__ == "__main__":
         print(str(e))
         print("SHIT HAPPENED")
         save_model("moderu/ore")
-        pickle.dump(inference_res, "inference_res.pkl")
+        with open("inference_res.pkl", "w") as inf:
+            pickle.dump(inference_res, inf)

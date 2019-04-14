@@ -56,13 +56,11 @@ def zero_except(idx):
     return rv
 
 def feed_model(data, labels=None, epochs=None):
-    data = np.array(data)
-    print(data.shape)
     if labels is None:
         #predict dance move
-        if epochs is None: epochs = 1
-        result = model.predict(data, batch_size=BATCH_SIZE)
-        return dance_moves[max(range(len(dance_moves)), key=lambda x: result[x])]
+        data2 = np.array([data])
+        result = model.predict(data2)
+        return dance_moves[max(range(len(dance_moves)), key=lambda x: result[0][x])]
     else:
         lbls = [zero_except(dance_moves_to_labels[i]) for i in labels]
         if epochs is None: epochs = 1
@@ -224,7 +222,7 @@ if __name__ == "__main__":
         for move in webcam():
             print(move)
 
-    from search_downloader import search_n_dl
+    # from search_downloader import search_n_dl
     from os import listdir, mkdir
     from os.path import isfile, join, exists
 

@@ -22,7 +22,7 @@ BATCH_SIZE=36 * 30
 
 TICKET = 1
 inference_res = []
-
+lock = threading.Lock()
 model = tf.keras.Sequential([
 # Adds a densely-connected layer with 64 units to the model:
 layers.Dense(64, activation='relu', input_shape=(BATCH_SIZE,)),
@@ -86,15 +86,18 @@ class Person:
     def __eq__(self, other):
         return self.dist(other) == 0
 
-def inference(order,image,model,target_size):
+def inference(order,image,model,target_size,est):
     global TICKET
-    est = TfPoseEstimator(get_graph_path(model), target_size=target_size)
     humans = est.inference(image,resize_to_default=True, upsample_size=4.0)
     while order != TICKET:
         continue
-    TICKET+=1
-    print("Frame "+str(order)+" finished...")
-    inference_res.append(humans)
+    with lock:
+        TICKET+=1
+        inference_res.append(humans)
+        if order % 5000 == 0:
+            print("Frame "+str(order)+" Finished...")
+
+
     return
 
 def read_video(video_file, model, target_size):
@@ -109,21 +112,24 @@ def read_video(video_file, model, target_size):
     persons = []
     frame_num = 0
     threads = []
+    est = TfPoseEstimator(get_graph_path(model), target_size=target_size)
     while cap.isOpened():
         new_peeps = []
         ret_val, image = cap.read()
+        if not ret_val:
+            break
         frame_num+=1
-        print("Frame "+str(frame_num))
-        thread = threading.Thread(target=inference, args=(frame_num,image,model,target_size))
+        thread = threading.Thread(target=inference, args=(frame_num,image,model,target_size,est,))
         threads.append(thread)
         #humans = e.inference(image,resize_to_default=True, upsample_size=4.0)
         thread.start()
-        if len(threads) % 500 == 0:
+        if len(threads) % 1000 == 0:
             for thread in threads:
                 thread.join()
             threads = []
     for thread in threads:
         thread.join()
+    print("All Threads completed")
     for humans in inference:
         for human in humans:
             curr_person = Person(human)
@@ -142,11 +148,10 @@ def read_video(video_file, model, target_size):
                 curr_person.set_bb_from(persons[guess_person])
             new_peeps.append(curr_person)
             curr_person.add_frame(human)
-
+            
             for peep in persons:
                 if peep not in new_peeps:
                     yield peep.frames, peep.epochs
-        print("Humans identified...");
         for peep in persons:
             yield peep.frames, peep.epochs
 
@@ -205,11 +210,12 @@ if __name__ == "__main__":
             move = "moves/" + move
             for vid in listdir(move):
                 if isfile(join(move, vid)):
-                    all_the_data = read_video(join(move, vid), 'mobilenet_thin', (720, 480))
+                    all_the_data = read_video(join(move, vid), 'mobilenet_thin', (368, 368))
                     for datum, epochs in all_the_data:
                         feed_model(datum, [move for i in range(epochs)], epochs / 30)
                     save_model("moderu/ore")
                     print("FINISHED A VIDEO")
-    except:
+    except Exception as e:
+        print(str(e))
         print("SHIT HAPPENED")
         save_model("moderu/ore")

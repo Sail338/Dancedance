@@ -69,15 +69,15 @@ class Person:
     def __init__(self, human):
         self.ok = False
         self.neck = BodyPart(0, CocoPart.Neck, 0, 0, 1)
+        self.bb = None
+        self.frames = []
+        self.epochs = 0
         parts = [human.body_parts[part] for part in human.body_parts]
         for part in parts:
             part_name = str(part.get_part_name())
             if "Neck"  in part_name:
                 self.ok = True
                 self.neck = part
-                self.bb = None
-                self.frame = []
-                self.epochs = 0
                 break
     def set_bb_from(self, person):
         if person.bb is None:
@@ -186,25 +186,27 @@ def restore_model(file="./moderu"):
     model.load_weights(file)
 
 def webcam():
+    model_used = "mobilenet_v2_large"
+    e = TfPoseEstimator(get_graph_path(model_used), target_size=(720, 480))
     cam = cv2.VideoCapture(0)
-    model = "mobilenet_thin"
-    # model = "cmu"
+    pers = None
     while True:
         ret_val, image = cam.read()
-        e = TfPoseEstimator(get_graph_path(model), target_size=(720, 480))
         humans = e.inference(image, resize_to_default=True, upsample_size=4.0)
-        print(humans)
         with_bb = filter(lambda hb: hb[1] is not None,
                 ((h, ebb.getUserBoundingBox(h)) for h in humans))
         try:
-            middle_man, bb = min(with_bb, key=lambda wb: ebb.distanceFormula(wb[1].x, wb[1].y, 0.5, 0.5))
+            middle_man, bb = min(with_bb, key=lambda wb: ebb.distanceFormula(wb[1]['x'], wb[1]['y'], 0.5, 0.5))
+            print(bb)
         except ValueError:
             yield "No people detected"
         else:
-            pers = Person(middle_man)
+            if pers is None:
+                pers = Person(middle_man)
             pers.bb = bb
             pers.add_frame(middle_man)
-            yield feed_model(pers.frames)
+            if len(pers.frames) == BATCH_SIZE:
+                yield feed_model(pers.frames)
 
 
 if __name__ == "__main__":

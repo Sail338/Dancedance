@@ -1,6 +1,7 @@
 import cv2
 
 import pickle
+import numpy as np
 
 import sys
 import threading
@@ -22,7 +23,7 @@ import estimateBoundingBox as ebb
 dance_moves = ["nae nae",'macarena']
 dance_moves_to_labels = {j: i for i, j in enumerate(dance_moves)}
 
-BATCH_SIZE=36 * 30
+BATCH_SIZE = 1102
 
 TICKET = 1
 inference_res = []
@@ -55,10 +56,12 @@ def zero_except(idx):
     return rv
 
 def feed_model(data, labels=None, epochs=None):
+    data = np.array(data)
+    print(data.shape)
     if labels is None:
         #predict dance move
         if epochs is None: epochs = 1
-        result = model.predict(data, batch_size=BATCH_SIZE, epochs=epochs)
+        result = model.predict(data, batch_size=BATCH_SIZE)
         return dance_moves[max(range(len(dance_moves)), key=lambda x: result[x])]
     else:
         lbls = [zero_except(dance_moves_to_labels[i]) for i in labels]
@@ -76,7 +79,7 @@ class Person:
         parts = [human.body_parts[part] for part in human.body_parts]
         for part in parts:
             part_name = str(part.get_part_name())
-            if "Neck"  in part_name:
+            if "Neck" in part_name:
                 self.ok = True
                 self.neck = part
                 break
@@ -90,8 +93,12 @@ class Person:
         self.bb['y'] += delta_y
     def add_frame(self, human):
         self.epochs += 1
-        parts = [human.body_parts[part] for part in human.body_parts]
-        new_frames = [([p.x, p.y] if p.score > Person.CONFIDENCE_THRES else [-1, -1]) for p in parts]
+        all_parts = {str(p): i for i, p in enumerate(CocoPart)}
+        new_frames = [(-1, -1) for i in CocoPart]
+        for part in human.body_parts:
+            pp = human.body_parts[part]
+            new_frames[all_parts[str(pp.get_part_name())]] = (pp.x, pp.y)
+
         for p in new_frames:
             if p[0] >= 0:
                 self.frames.append((p[0] - self.bb['x'])/self.bb['w'])
@@ -207,8 +214,8 @@ def webcam():
             pers.bb = bb
             pers.add_frame(middle_man)
             print(len(pers.frames))
-            if len(pers.frames) == BATCH_SIZE:
-                yield feed_model(pers.frames)
+            if len(pers.frames) >= BATCH_SIZE:
+                yield feed_model(pers.frames.copy())
                 pers = Person(middle_man)
 
 if __name__ == "__main__":

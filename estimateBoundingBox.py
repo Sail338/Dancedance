@@ -4,15 +4,19 @@ import math
 def getUserBoundingBox(human):
     parts = [human.body_parts[part] for part in human.body_parts]
     wingSpanParts = {}
+    check = 0
     for part in parts:
         part_name = part.get_part_name()
 
-        if("Wrist" in str(part_name) or "Elbow" in str(part_name) or "Shoulder" in str(part_name) or "Ankle" in str(part_name)):
+        if("Wrist" in str(part_name) or "Elbow" in str(part_name) or "Shoulder" in str(part_name)):
+            check += 1
+            wingSpanParts[str(part_name)] = part
+        if "Ankle" in str(part_name):
             wingSpanParts[str(part_name)] = part
 
-    if(len(wingSpanParts) < 7):
+    if(len(wingSpanParts) < 7 or check != 6):
         return None
-
+    
     curr_distance = 0
     height = 0
     #doing left
@@ -20,11 +24,12 @@ def getUserBoundingBox(human):
     print(wingSpanParts.keys())
     if("CocoPart.LAnkle" in wingSpanParts):
         if("CocoPart.RAnkle" in wingSpanParts):
-            ankle = wingSpanParts["CocoPart.LAnke"] if wingSpanParts["CocoPart.LAnkle"].y > wingSpanParts["CocoPart.RAnkle"].y else wingSpanParts["CocoPart.RAnkle"]
+            ankle = wingSpanParts["CocoPart.LAnkle"] if wingSpanParts["CocoPart.LAnkle"].y > wingSpanParts["CocoPart.RAnkle"].y else wingSpanParts["CocoPart.RAnkle"]
         else:
             ankle = wingSpanParts["CocoPart.LAnkle"]
     else:
         ankle = wingSpanParts["CocoPart.RAnkle"]
+    
 
     l_wrist = wingSpanParts["CocoPart.LWrist"]
     l_shoulder = wingSpanParts['CocoPart.LShoulder']

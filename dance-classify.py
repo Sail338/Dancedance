@@ -5,6 +5,7 @@ import pickle
 import sys
 import threading
 from os import getcwd
+import os
 from os.path import exists
 sys.path.append(getcwd() + "/tf-pose-estimation")
 
@@ -25,9 +26,15 @@ BATCH_SIZE=36 * 30
 
 TICKET = 1
 inference_res = []
-if exists("inference_res.pkl"):
-    with open("inference_res.pkl") as inf:
-        inference_res = pickle.load(inf)
+if os.path.isfile('inference_res.pkl'):
+    print("YES YES YES YES YES YES")
+    try:
+        with open("./inference_res.pkl",'rb') as inf:
+            inference_res = pickle.load(inf)
+            print(len(inference_res))
+    except Exception as e:
+        print(str(e))
+        pass
 lock = threading.Lock()
 
 model = tf.keras.Sequential([
@@ -60,15 +67,18 @@ def feed_model(data, labels=None, epochs=None):
 class Person:
     CONFIDENCE_THRES = 0.3
     def __init__(self, human):
-        if CocoPart.Neck not in human.body_parts or human.body_parts[CocoPart.Neck].score < Person.CONFIDENCE_THRES:
-            self.ok = False #no neck, no life
-            self.neck = BodyPart(0, CocoPart.Neck, 0, 0, 1)
-        else:
-            self.ok = True
-            self.neck = human.body_parts[CocoPart.Neck]
-        self.bb = None
-        self.frame = []
-        self.epochs = 0
+        self.ok = False
+        self.neck = BodyPart(0, CocoPart.Neck, 0, 0, 1)
+        parts = [human.body_parts[part] for part in human.body_parts]
+        for part in parts:
+            part_name = str(part.get_part_name())
+            if "Neck"  in part_name:
+                self.ok = True
+                self.neck = part
+                self.bb = None
+                self.frame = []
+                self.epochs = 0
+                break
     def set_bb_from(self, person):
         if person.bb is None:
             return
@@ -108,16 +118,17 @@ def inference(order,image,model,target_size,est):
     return
 
 def read_video(video_file, model, target_size):
+    global inference_res 
     HEART_DIST_TOL = 5
     CONFIDENCE = 0.3 #IDK, they use this somewhere
     cap = cv2.VideoCapture(video_file)
-    cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, len(inference_res))
+    cap.set(cv2.CAP_PROP_POS_FRAMES, len(inference_res))
 
     if cap.isOpened() is False:
         print("Error opening video streasm or file")
 
     persons = []
-    frame_num = 0
+    frame_num = TICKET
     threads = []
     est = TfPoseEstimator(get_graph_path(model), target_size=target_size)
     while cap.isOpened():
@@ -125,28 +136,31 @@ def read_video(video_file, model, target_size):
         ret_val, image = cap.read()
         if not ret_val:
             break
-        frame_num+=1
         thread = threading.Thread(target=inference, args=(frame_num,image,model,target_size,est,))
+        frame_num+=1
         threads.append(thread)
         #humans = e.inference(image,resize_to_default=True, upsample_size=4.0)
         thread.start()
-        if len(threads) % 1000 == 0:
+        if len(threads) % 15000 == 0:
             for thread in threads:
                 thread.join()
             threads = []
     for thread in threads:
         thread.join()
     print("All Threads completed")
-    for humans in inference:
+    for humans in inference_res:
         for human in humans:
             curr_person = Person(human)
             if not curr_person.ok:
+                print("neckless fucktard")
                 continue
 
-            guess_person = min(range(len(persons)), key=lambda i: person[i].dist(curr_person))
-            if persons[guess_person].dist(curr_person) > HEART_DIST_TOL:
+            if persons:
+                guess_person = min(range(len(persons)), key=lambda i: person[i].dist(curr_person))
+            if not persons or persons[guess_person].dist(curr_person) > HEART_DIST_TOL:
                 #new person
-                new_bb = ebb.estimateBoundingBox(human)
+                print("A person appeared")
+                new_bb = ebb.getUserBoundingBox(human)
                 if new_bb is None:
                     continue
                 else:
@@ -158,9 +172,11 @@ def read_video(video_file, model, target_size):
             
             for peep in persons:
                 if peep not in new_peeps:
+                    print("A person yote")
                     yield peep.frames, peep.epochs
         for peep in persons:
             yield peep.frames, peep.epochs
+    inference_res = []
 
 
 def save_model(file="./moderu"):

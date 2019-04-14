@@ -21,7 +21,6 @@ def getUserBoundingBox(human):
     height = 0
     #doing left
     ankle = None
-    print(wingSpanParts.keys())
     if("CocoPart.LAnkle" in wingSpanParts):
         if("CocoPart.RAnkle" in wingSpanParts):
             ankle = wingSpanParts["CocoPart.LAnkle"] if wingSpanParts["CocoPart.LAnkle"].y > wingSpanParts["CocoPart.RAnkle"].y else wingSpanParts["CocoPart.RAnkle"]

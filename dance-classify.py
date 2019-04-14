@@ -57,7 +57,8 @@ def zero_except(idx):
 def feed_model(data, labels=None, epochs=None):
     if labels is None:
         #predict dance move
-        result = model.predict(data, batch_size=BATCH_SIZE)
+        if epochs is None: epochs = 1
+        result = model.predict(data, batch_size=BATCH_SIZE, epochs=epochs)
         return dance_moves[max(range(len(dance_moves)), key=lambda x: result[x])]
     else:
         lbls = [zero_except(dance_moves_to_labels[i]) for i in labels]
@@ -65,7 +66,7 @@ def feed_model(data, labels=None, epochs=None):
         return model.fit(data, lbls, epochs=epochs)
 
 class Person:
-    CONFIDENCE_THRES = 0.3
+    CONFIDENCE_THRES = 0.0
     def __init__(self, human):
         self.ok = False
         self.neck = BodyPart(0, CocoPart.Neck, 0, 0, 1)
@@ -89,7 +90,8 @@ class Person:
         self.bb['y'] += delta_y
     def add_frame(self, human):
         self.epochs += 1
-        new_frames = [([p.x, p.y] if p.score > Person.CONFIDENCE_THRES else [-1, -1]) for p in human.pairs]
+        parts = [human.body_parts[part] for part in human.body_parts]
+        new_frames = [([p.x, p.y] if p.score > Person.CONFIDENCE_THRES else [-1, -1]) for p in parts]
         for p in new_frames:
             if p[0] >= 0:
                 self.frames.append((p[0] - self.bb['x'])/self.bb['w'])
@@ -197,7 +199,6 @@ def webcam():
                 ((h, ebb.getUserBoundingBox(h)) for h in humans))
         try:
             middle_man, bb = min(with_bb, key=lambda wb: ebb.distanceFormula(wb[1]['x'], wb[1]['y'], 0.5, 0.5))
-            print(bb)
         except ValueError:
             yield "No people detected"
         else:
@@ -205,9 +206,10 @@ def webcam():
                 pers = Person(middle_man)
             pers.bb = bb
             pers.add_frame(middle_man)
+            print(len(pers.frames))
             if len(pers.frames) == BATCH_SIZE:
                 yield feed_model(pers.frames)
-
+                pers = Person(middle_man)
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

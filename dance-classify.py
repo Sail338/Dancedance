@@ -20,10 +20,10 @@ from tensorflow.keras import layers
 import estimateBoundingBox as ebb
 
 #dance_moves = ["nae nae", 'shuffling dance', 'moonwalk', 'sprinkler dance','macarena','twerking','flossing','gangnam style']
-dance_moves = ["nae nae",'macarena']
+dance_moves = ["naenae",'gangam']
 dance_moves_to_labels = {j: i for i, j in enumerate(dance_moves)}
 
-BATCH_SIZE = 1102
+BATCH_SIZE = 38
 
 TICKET = 1
 inference_res = []
@@ -56,15 +56,16 @@ def zero_except(idx):
     return rv
 
 def feed_model(data, labels=None, epochs=None):
+    data2 = np.array([data])
     if labels is None:
         #predict dance move
-        data2 = np.array([data])
         result = model.predict(data2)
         return dance_moves[max(range(len(dance_moves)), key=lambda x: result[0][x])]
     else:
-        lbls = [zero_except(dance_moves_to_labels[i]) for i in labels]
+        lbls = np.array([zero_except(dance_moves_to_labels[i]) for i in labels])
+        print(lbls, epochs, data2.shape)
         if epochs is None: epochs = 1
-        return model.fit(data, lbls, epochs=epochs)
+        return model.fit(data2, lbls, epochs=epochs)
 
 class Person:
     CONFIDENCE_THRES = 0.0
@@ -126,7 +127,7 @@ def inference(order,image,model,target_size,est):
 
 def read_video(video_file, model, target_size):
     global inference_res 
-    HEART_DIST_TOL = 5
+    HEART_DIST_TOL = 100
     CONFIDENCE = 0.3 #IDK, they use this somewhere
     cap = cv2.VideoCapture(video_file)
     cap.set(cv2.CAP_PROP_POS_FRAMES, len(inference_res))
@@ -139,7 +140,6 @@ def read_video(video_file, model, target_size):
     threads = []
     est = TfPoseEstimator(get_graph_path(model), target_size=target_size)
     while cap.isOpened():
-        new_peeps = []
         ret_val, image = cap.read()
         if not ret_val:
             break
@@ -156,6 +156,9 @@ def read_video(video_file, model, target_size):
         thread.join()
     print("All Threads completed")
     for humans in inference_res:
+        unpaired = set(range(len(persons)))
+        print(unpaired)
+        new_peeps = []
         for human in humans:
             curr_person = Person(human)
             if not curr_person.ok:
@@ -163,10 +166,9 @@ def read_video(video_file, model, target_size):
                 continue
 
             if persons:
-                guess_person = min(range(len(persons)), key=lambda i: person[i].dist(curr_person))
-            if not persons or persons[guess_person].dist(curr_person) > HEART_DIST_TOL:
+                guess_person = min(range(len(persons)), key=lambda i: persons[i].dist(curr_person))
+            if (len(persons) == 0) or persons[guess_person].dist(curr_person) > HEART_DIST_TOL:
                 #new person
-                print("A person appeared")
                 new_bb = ebb.getUserBoundingBox(human)
                 if new_bb is None:
                     continue
@@ -174,15 +176,18 @@ def read_video(video_file, model, target_size):
                     curr_person.bb = new_bb
             else:
                 curr_person.set_bb_from(persons[guess_person])
+                if guess_person in unpaired: unpaired.remove(guess_person)
             new_peeps.append(curr_person)
             curr_person.add_frame(human)
             
-            for peep in persons:
-                if peep not in new_peeps:
-                    print("A person yote")
-                    yield peep.frames, peep.epochs
-        for peep in persons:
-            yield peep.frames, peep.epochs
+        for idx in unpaired:
+            print("A person really yote", guess_person)
+            yield persons[idx].frames, persons[idx].epochs
+        persons = new_peeps
+
+    for peep in persons:
+        print("A person yote")
+        yield peep.frames, peep.epochs
     inference_res = []
 
 
@@ -239,17 +244,19 @@ if __name__ == "__main__":
                 search_n_dl(move + " compilation", 20, "moves/"+move)
             except FileExistsError:
                 print("Directory Already Exists")
-            move = "moves/" + move
-            for vid in listdir(move):
+            move_path = "moves/" + move
+            for vid in listdir(move_path):
                 print(vid)
-                if isfile(join(move, vid)):
-                    all_the_data = read_video(join(move, vid), 'mobilenet_thin', (368, 368))
+                if isfile(join(move_path, vid)):
+                    all_the_data = read_video(join(move_path, vid), 'mobilenet_thin', (368, 368))
                     for datum, epochs in all_the_data:
-                        feed_model(datum, [move for i in range(epochs)], epochs / 30)
+                        if len(datum) >= BATCH_SIZE:
+                            feed_model(datum, labels=[move for i in range(epochs)], epochs=epochs)
                     save_model("moderu/ore")
                     print("FINISHED A VIDEO")
     except Exception as e:
-        print(str(e))
+        import traceback as tb
+        print(tb.format_exc())
         print("SHIT HAPPENED")
         save_model("moderu/ore")
         with open("inference_res.pkl", "wb") as inf:

@@ -71,8 +71,6 @@ def distanceFormula(x1,y1,x2,y2):
     return math.sqrt((x2-x1)**2 + (y2-y1)**2)
 
 def scaled_bounding_box(human, height, width):
-    print(width)
-    print(height)
     b = getUserBoundingBox(human)
     if b is None:
         rv = {'w': 0,'x': 0,'y': 0,'h': 0}
@@ -101,7 +99,6 @@ if __name__ == "__main__":
     model = 'cmu'
     e = TfPoseEstimator(get_graph_path(model), target_size=(432, 368))
     humans = e.inference(image, resize_to_default=True, upsample_size=4.0)
-    print(humans)
     image = TfPoseEstimator.draw_humans(image, humans, bounding_box_fn=scaled_bounding_box)
 
     import matplotlib.pyplot as plt

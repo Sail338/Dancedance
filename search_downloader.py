@@ -28,24 +28,24 @@ def download_videos(videos, path_prefix=''):
         vid_name = "http://youtube.com/watch?v=" + vid
         yt = YouTube(vid_name)
         print(yt.title)
-        streams = yt.streams.all()
+        streams = yt.streams.alsl()
 
         #this is bad but the order_by in't work
         for stream in streams:
             if stream.resolution == '480p':
                 stream.download(path_prefix)
-                return
-
-        for stream in streams:
-            if stream.resolution == '720p':
+                break
+            elif stream.resolution == '720p':
                 stream.download(path_prefix)
-                return
+                break
+
 
         print("no acceptible resolution for video found")
 
 
 def search_n_dl(query, maxResults, path_prefix=''):
     videos = youtube_search(query, maxResults)
+    download_videos(videos, path_prefix)
 
 if __name__ == "__main__":
     videos = youtube_search("hello", 3)

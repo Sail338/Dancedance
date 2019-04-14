@@ -1,20 +1,23 @@
 import cv2
-#TODO: fix import?
 
 import sys
 from os import getcwd
 sys.path.append(getcwd() + "/tf-pose-estimation")
 
 from tf_pose.networks import get_graph_path, model_wh
-from tf_pose.estimator import TfPoseEstimator
+from tf_pose.estimator import TfPoseEstimator, BodyPart
+from tf_pose.common import CocoPart
 
 import tensorflow as tf
 from tensorflow.keras import layers
 
-dance_moves = ['dab', 'nay-nay', 'whip', 'shuffling', 'moonwalk', 'what the good fuck']
+import estimateBoundingBox as ebb
+
+#dance_moves = ["nae nae", 'shuffling dance', 'moonwalk', 'sprinkler dance','macarena','twerking','flossing','gangnam style']
+dance_moves = ["nae nae",'macarena']
 dance_moves_to_labels = {j: i for i, j in enumerate(dance_moves)}
 
-BATCH_SIZE=34
+BATCH_SIZE=36 * 30
 
 model = tf.keras.Sequential([
 # Adds a densely-connected layer with 64 units to the model:
@@ -40,33 +43,86 @@ def feed_model(data, labels=None, epochs=None):
         return dance_moves[max(range(len(dance_moves)), key=lambda x: result[x])]
     else:
         lbls = [zero_except(dance_moves_to_labels[i]) for i in labels]
-        if num_frames is None: num_frames = 1
-        return model.fit(data, lbls, epochs=num_frames)
+        if epochs is None: epochs = 1
+        return model.fit(data, lbls, epochs=epochs)
+
+class Person:
+    CONFIDENCE_THRES = 0.3
+    def __init__(self, human):
+        if CocoPart.Neck not in human.body_parts or human.body_parts[CocoPart.Neck].score < Person.CONFIDENCE_THRES:
+            self.ok = False #no neck, no life
+            self.neck = BodyPart(0, CocoPart.Neck, 0, 0, 1)
+        else:
+            self.ok = True
+            self.neck = human.body_parts[CocoPart.Neck]
+        self.bb = None
+        self.frame = []
+        self.epochs = 0
+    def set_bb_from(self, person):
+        if person.bb is None:
+            return
+        delta_x = self.neck.x - person.neck.x
+        delta_y = self.neck.y - person.neck.y
+        self.bb = person.bb.copy()
+        self.bb['x'] += delta_x
+        self.bb['y'] += delta_y
+    def add_frame(self, human):
+        self.epochs += 1
+        new_frames = [([p.x, p.y] if p.score > Person.CONFIDENCE_THRES else [-1, -1]) for p in human.pairs]
+        for p in new_frames:
+            if p[0] >= 0:
+                self.frames.append((p[0] - self.bb['x'])/self.bb['w'])
+                self.frames.append((p[1] - self.bb['y'])/self.bb['h'])
+            else:
+                self.frames.append(-1)
+                self.frames.append(-1)
+
+    def dist(self, person):
+        return ebb.distanceFormula(self.neck.x, self.neck.y, person.neck.x, person.neck.y)
+    def __eq__(self, other):
+        return self.dist(other) == 0
 
 def read_video(video_file, model, target_size):
-    CONFIDENCE = 0.4
+    HEART_DIST_TOL = 5
+    CONFIDENCE = 0.3 #IDK, they use this somewhere
     cap = cv2.VideoCapture(video_file)
 
     if cap.isOpened() is False:
         print("Error opening video stream or file")
-    frames = []
+
     num_frames = 0
+    persons = []
     while cap.isOpened():
+        new_peeps = []
         ret_val, image = cap.read()
         e = TfPoseEstimator(get_graph_path(model), target_size=target_size)
 
-        humans = e.inference(image)
-        temp_frames = []
-        frame_is_trash = True
-        for part in humans:
-            if part.score > CONFIDENCE:
-                frame_is_trash = False
-                temp_frames += [part.x, part.y]
+        humans = e.inference(image,resize_to_default=True, upsample_size=4.0)
+        for human in humans:
+            curr_person = Person(human)
+            if not curr_person.ok:
+                continue
+
+            guess_person = min(range(len(persons)), key=lambda i: person[i].dist(curr_person))
+            if persons[guess_person].dist(curr_person) > HEART_DIST_TOL:
+                #new person
+                new_bb = ebb.estimateBoundingBox(human)
+                if new_bb is None:
+                    continue
+                else:
+                    curr_person.bb = new_bb
             else:
-                temp_frames += [-1, -1]
-        if not frame_is_trash:
-            num_frames += 1
-            frames += temp_frames
+                curr_person.set_bb_from(persons[guess_person])
+            new_peeps.append(curr_person)
+            curr_person.add_frame(human)
+
+            for peep in persons:
+                if peep not in new_peeps:
+                    yield peep.frames, peep.epochs
+
+        for peep in persons:
+            yield peep.frames, peep.epochs
+
 
 def save_model(file="./moderu"):
     model.save_weights(file)
@@ -74,7 +130,30 @@ def save_model(file="./moderu"):
 def restore_model(file="./moderu"):
     model.load_weights(file)
 
+def webcam():
+    cam = cv2.VideoCapture(0)
+    while True:
+        ret_val, image = cam.read()
+        humans = e.inference(image, resize_to_default=True, upsample_size=4.0)
+        with_bb = filter(lambda hb: hb[1] is not None,
+                ((h, ebb.estimateBoundingBox(h)) for h in humans))
+        try:
+            middle_man, bb = min(with_bb, key=lambda wb: ebb.distanceFormula(wb[1].x, wb[1].y, 0.5, 0.5))
+        except ValueError:
+            yield "No people detected"
+        else:
+            pers = Person(middle_man)
+            pers.bb = bb
+            pers.add_frame(middle_man)
+            yield feed_model(pers.frames)
+
+
 if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        restore_model("moderu/ore")
+        for move in webcam():
+            print(move)
+
     from search_downloader import search_n_dl
     from os import listdir, mkdir
     from os.path import isfile, join, exists
@@ -85,13 +164,21 @@ if __name__ == "__main__":
         mkdir("moderu")
         save_model("moderu/ore")
 
-    move = "nae-nae"
-    if not exists(move):
-        mkdir(move)
-        search_n_dl(move, 1, move)
-
-    for vid in listdir(move):
-        if isfile(join(move, vid)):
-            data, num = read_video(join(move, vid), 'cmu', (720, 480))
-            feed_model(data, move, num)
-    save_model("moderu/ore")
+    try:
+        for move in dance_moves:
+            try:
+                mkdir("moves/"+move)
+                search_n_dl(move + " compilation", 20, "moves/"+move)
+            except FileExistsError:
+                print("Directory Already Exists")
+            move = "moves/" + move
+            for vid in listdir(move):
+                if isfile(join(move, vid)):
+                    all_the_data = read_video(join(move, vid), 'mobilenet_thin', (720, 480))
+                    for datum, epochs in all_the_data:
+                        feed_model(datum, [move for i in range(epochs)], epochs / 30)
+                    save_model("moderu/ore")
+                    print("FINISHED A VIDEO")
+    except:
+        print("SHIT HAPPENED")
+        save_model("moderu/ore")

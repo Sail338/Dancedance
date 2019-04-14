@@ -1,8 +1,11 @@
 import cv2
 
+import pickle
+
 import sys
 import threading
 from os import getcwd
+from os.path import exists
 sys.path.append(getcwd() + "/tf-pose-estimation")
 
 from tf_pose.networks import get_graph_path, model_wh
@@ -22,7 +25,11 @@ BATCH_SIZE=36 * 30
 
 TICKET = 1
 inference_res = []
+if exists("inference_res.pkl"):
+    with open("inference_res.pkl") as inf:
+        inference_res = pickle.load(inf)
 lock = threading.Lock()
+
 model = tf.keras.Sequential([
 # Adds a densely-connected layer with 64 units to the model:
 layers.Dense(64, activation='relu', input_shape=(BATCH_SIZE,)),
@@ -104,11 +111,11 @@ def read_video(video_file, model, target_size):
     HEART_DIST_TOL = 5
     CONFIDENCE = 0.3 #IDK, they use this somewhere
     cap = cv2.VideoCapture(video_file)
+    cap.set(cv2.CV_CAP_PROP_POS_FRAMES, len(inference_res))
 
     if cap.isOpened() is False:
         print("Error opening video streasm or file")
 
-    num_frames = 0
     persons = []
     frame_num = 0
     threads = []
@@ -164,8 +171,8 @@ def restore_model(file="./moderu"):
 
 def webcam():
     cam = cv2.VideoCapture(0)
-    # model = "mobilenet_thin"
-    model = "cmu"
+    model = "mobilenet_thin"
+    # model = "cmu"
     while True:
         ret_val, image = cam.read()
         e = TfPoseEstimator(get_graph_path(model), target_size=(720, 480))
@@ -219,3 +226,4 @@ if __name__ == "__main__":
         print(str(e))
         print("SHIT HAPPENED")
         save_model("moderu/ore")
+        pickle.dump(inference_res, "inference_res.pkl")

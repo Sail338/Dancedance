@@ -216,6 +216,7 @@ if __name__ == "__main__":
                 print("Directory Already Exists")
             move = "moves/" + move
             for vid in listdir(move):
+                print(vid)
                 if isfile(join(move, vid)):
                     all_the_data = read_video(join(move, vid), 'mobilenet_thin', (368, 368))
                     for datum, epochs in all_the_data:

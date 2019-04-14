@@ -210,7 +210,7 @@ def webcam():
         try:
             middle_man, bb = min(with_bb, key=lambda wb: ebb.distanceFormula(wb[1]['x'], wb[1]['y'], 0.5, 0.5))
         except ValueError:
-            yield "No people detected"
+            yield "nothing"
         else:
             if pers is None:
                 pers = Person(middle_man)
@@ -223,9 +223,9 @@ def webcam():
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
+        from derp import play_manager
         restore_model("moderu/ore")
-        for move in webcam():
-            print(move)
+        play_manager(lambda v: map(lambda s: s.replace(" ", "-"), webcam()))
 
     # from search_downloader import search_n_dl
     from os import listdir, mkdir

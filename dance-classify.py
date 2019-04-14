@@ -181,7 +181,6 @@ def read_video(video_file, model, target_size):
             curr_person.add_frame(human)
             
         for idx in unpaired:
-            print("A person really yote", guess_person)
             yield persons[idx].frames, persons[idx].epochs
         persons = new_peeps
 

@@ -414,15 +414,15 @@ class TfPoseEstimator:
 
             #bounding box (HEMAN)
             box = bounding_box_fn(human, image_h, image_w)
-            print(box)
-            b_left = (int(box['x'] - box['w']/2), int(box['y'] - box['h']/2))
-            t_left = (int(box['x'] - box['w']/2), int(box['y'] + box['h']/2))
-            t_right = (int(box['x'] + box['w']/2), int(box['y'] + box['h']/2))
-            b_right = (int(box['x'] + box['w']/2), int(box['y'] - box['h']/2))
-            cv2.line(npimg, b_left, t_left, [0, 0, 255])
-            cv2.line(npimg, t_left, t_right, [0, 0, 255])
-            cv2.line(npimg, t_right, b_right, [0, 0, 255])
-            cv2.line(npimg, b_right, b_left, [0, 0, 255])
+            if box is not None:
+                b_left = (int(box['x'] - box['w']/2), int(box['y'] - box['h']/2))
+                t_left = (int(box['x'] - box['w']/2), int(box['y'] + box['h']/2))
+                t_right = (int(box['x'] + box['w']/2), int(box['y'] + box['h']/2))
+                b_right = (int(box['x'] + box['w']/2), int(box['y'] - box['h']/2))
+                cv2.line(npimg, b_left, t_left, [0, 0, 255])
+                cv2.line(npimg, t_left, t_right, [0, 0, 255])
+                cv2.line(npimg, t_right, b_right, [0, 0, 255])
+                cv2.line(npimg, b_right, b_left, [0, 0, 255])
 
         return npimg
 

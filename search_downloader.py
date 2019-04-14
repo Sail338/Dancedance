@@ -28,7 +28,7 @@ def download_videos(videos, path_prefix=''):
         vid_name = "http://youtube.com/watch?v=" + vid
         yt = YouTube(vid_name)
         print(yt.title)
-        streams = yt.streams.alsl()
+        streams = yt.streams.all()
 
         #this is bad but the order_by in't work
         for stream in streams:
@@ -48,5 +48,5 @@ def search_n_dl(query, maxResults, path_prefix=''):
     download_videos(videos, path_prefix)
 
 if __name__ == "__main__":
-    videos = youtube_search("hello", 3)
+    videos = youtube_search("gangnam style dance", 3)
     download_videos(videos, 'test')

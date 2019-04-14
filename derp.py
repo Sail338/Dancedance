@@ -1,3 +1,5 @@
+import cv2
+
 import sys
 from os import getcwd
 sys.path.append(getcwd() + "/tf-pose-estimation")
@@ -18,55 +20,35 @@ def hardcode_dances(video_file):
         return
 
 
-    e = TfPoseEstimator(get_graph_path('mobilenet_thin'), (720,480))
+    e = TfPoseEstimator(get_graph_path('mobilenet_v2_large'), (720,480))
     while cap.isOpened():
-        print("screen cap")
         ret_val, image = cap.read()
         humans = e.inference(image, resize_to_default=True, upsample_size=4.0)
-        print(humans)
-
-        nae_nae_count = 0
-        gangnam_count = 0
 
         for human in humans:
-            print(human.body_parts)
             parts_dict = human.body_parts
             wrists_y = []
             shoulders_y = []
             for k,v in parts_dict.items():
-                if 'Wrist' in str(v.get_part_name()):
-                    print("a wrist")
-                    print(type(v))
-                    print(v)
+                if 'Wrist' in str(v.get_part_name()) or 'Elbow' in str(v.get_part_name()):
                     wrists_y.append(v.y)
-                elif 'Shoulder' in str(v.get_part_name()):
-                    print("a shoulder")
-                    print(v)
+                elif 'Shoulder' in str(v.get_part_name()) or 'Neck' in str(v.get_part_name()):
                     shoulders_y.append(v.y)
-                else:
-                    print("not a wrist or shoulder")
-            
+
             #if all wrists are higher up than all shoulders, print "xD"
             #else, print ":c"
-            
+
             if len(wrists_y) == 0 or len(shoulders_y) == 0:
-                print("not enough info to classify")
+                print("nothing")
                 continue
 
             wrists_y.sort()
-            shoulders_y.sort() 
+            shoulders_y.sort()
 
-            if wrists_y[0] > shoulders_y[-1]:
-                nae_nae_count+=1
+            if wrists_y[-1] < shoulders_y[0]:
                 print("nae nae")
             else:
-                gangnam_count+=1
                 print("gangnam")
 
-             
-
-                        
-            
-
 if __name__ == "__main__":
-    hardcode_dances("Nae Nae Dance Compilation TPMS.mp4")
+    hardcode_dances(0)

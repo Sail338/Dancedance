@@ -1,5 +1,4 @@
 import cv2
-import time
 
 import sys
 from os import getcwd
@@ -15,7 +14,6 @@ def play_mp3(path):
 
 def hardcode_dances(video_file):
     cap = cv2.VideoCapture(video_file)
-    fps_time = 0
 
     if not cap.isOpened():
         print("Error opening video stream/file")
@@ -26,15 +24,6 @@ def hardcode_dances(video_file):
         ret_val, image = cap.read()
         humans = e.inference(image, resize_to_default=True, upsample_size=4.0)
         image = TfPoseEstimator.draw_humans(image, humans, imgcopy=False)
-
-        cv2.putText(image,
-                    "FPS: %f" % (1.0 / (time.time() - fps_time)),
-                    (10, 10),  cv2.FONT_HERSHEY_SIMPLEX, 0.5,
-                    (0, 255, 0), 2)
-        cv2.imshow('tf-pose-estimation result', image)
-        fps_time = time.time()
-        if cv2.waitKey(1) == 27:
-            break
 
         for human in humans:
             parts_dict = human.body_parts
